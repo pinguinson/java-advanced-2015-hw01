@@ -4,10 +4,8 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.util.ArrayList;
 
 /**
  * Created by pinguinson on 17.02.2015.
@@ -31,7 +29,7 @@ public class Walk {
                     //System.err.println("HashCalculatingException");
                 }
                 long endTime = System.currentTimeMillis();
-                System.err.println(String.valueOf(endTime - startTime) + " ms");
+                //System.err.println(String.valueOf(endTime - startTime) + " ms");
                 String hashString = String.format("%08x", hash);
                 String result = hashString + " " + currentFile.toString()
                         + System.getProperty("line.separator");
@@ -43,13 +41,13 @@ public class Walk {
             System.err.println("Input file not found.");
         } catch (UnsupportedEncodingException e) {
             System.err.println("Input file charset is not UTF-8.");
+        } catch (FileSystemException e) {
+            System.err.println("Input is a directory");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Input string is not a file.");
         }
-
     }
 
-    //MappedByteBuffer
     private static int hashFNV(FileChannel channel) {
         final int OFFSET_BASIS = 0x811c9dc5;
         final int FNV_PRIME = 0x01000193;
@@ -59,17 +57,13 @@ public class Walk {
 
 
         ByteBuffer reader = ByteBuffer.allocate(PAGE_SIZE);
-        int c = 0;
         try {
             while (-1 != (channel.read(reader))) {
                 reader.flip();
-
                 while (reader.hasRemaining()) {
-                    c = reader.get() & 0xff;
                     hash *= FNV_PRIME;
-                    hash ^= c;
+                    hash ^= reader.get() & 0xff;
                 }
-
                 reader.clear();
             }
 
@@ -83,10 +77,14 @@ public class Walk {
 
     public static void main(String[] args) {
         Charset charset = Charset.forName("UTF-8");
-        Path inputFile = Paths.get(args[0]);
-        Path outputFile = Paths.get(args[1]);
+        try {
+            Path inputFile = Paths.get(args[0]);
+            Path outputFile = Paths.get(args[1]);
 
-        processInputFile(inputFile, outputFile, charset);
+            processInputFile(inputFile, outputFile, charset);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.err.println("run with <input file> <output file>");
+        }
 
     }
 }
